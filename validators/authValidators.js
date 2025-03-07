@@ -50,6 +50,25 @@ exports.signupValidationRules = [
       }),
 ];
 
+exports.loginValidationRules = [
+   oneOf(
+      [
+         body("username")
+            .exists({ checkFalsy: true })
+            .withMessage("Username is required if no email is provided"),
+         body("email")
+            .exists({ checkFalsy: true })
+            .withMessage("Email is required if no username is provided")
+            .isEmail()
+            .withMessage("Must be a valid email address"),
+      ],
+      "You must provide either a valid username or a valid email"
+   ),
+   body("password")
+      .exists({ checkFalsy: true })
+      .withMessage("Password is required"),
+];
+
 exports.validateSignup = (req, res, next) => {
    const errors = validationResult(req);
    if (!errors.isEmpty()) {
@@ -57,6 +76,14 @@ exports.validateSignup = (req, res, next) => {
          status: "fail",
          errors: errors.array(),
       });
+   }
+   next();
+};
+
+exports.validateLogin = (req, res, next) => {
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+      return res.status(400).json({ status: "fail", errors: errors.array() });
    }
    next();
 };
