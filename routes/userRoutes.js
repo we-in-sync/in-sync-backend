@@ -10,5 +10,11 @@ router.post(
    authValidator.validateSignup,
    authController.signup
 );
+router.post(
+   "/login",
+   authValidator.loginValidationRules,
+   authValidator.validateLogin,
+   authController.login
+);
 
 module.exports = router;
