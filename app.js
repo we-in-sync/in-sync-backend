@@ -7,6 +7,8 @@ const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const userRouter = require("./routes/userRoutes");
 const globalErrorHandler = require("./controllers/errorController");
+const AppError = require("./utils/appError");
+const { swaggerUi, swaggerDocs } = require("./utils/swagger");
 
 const app = express();
 
@@ -44,6 +46,10 @@ app.use(xss());
 //app.use(hpp({}))
 
 app.use("/api/v1/users", userRouter);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.all("*", (req, res, next) => {
+   next(new AppError(404, `The endpoint ${req.originalUrl} does not exist!`));
+});
 
 app.use(globalErrorHandler);
 
