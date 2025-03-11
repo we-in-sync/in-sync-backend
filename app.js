@@ -43,7 +43,7 @@ app.use(xss());
 // Parameter pollution
 //app.use(hpp({}))
 
-app.use("/api/users", userRouter);
+app.use("/api/v1/users", userRouter);
 
 app.use(globalErrorHandler);
 
