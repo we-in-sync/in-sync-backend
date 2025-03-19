@@ -3,13 +3,18 @@ dotenv.config({ path: "./.env" });
 const mongoose = require("mongoose");
 const app = require("./app");
 
-const DB =
-   process.env.NODE_ENV === "production"
-      ? process.env.REMOTE_DB_CONNECTION.replace(
-           "<PASSWORD>",
-           process.env.REMOTE_DB_PASSWORD
-        )
-      : process.env.LOCAL_DB;
+// const DB =
+//    process.env.NODE_ENV === "production"
+//       ? process.env.REMOTE_DB_CONNECTION.replace(
+//            "<PASSWORD>",
+//            process.env.REMOTE_DB_PASSWORD
+//         )
+//       : process.env.LOCAL_DB;
+
+const DB = process.env.REMOTE_DB_CONNECTION.replace(
+   "<PASSWORD>",
+   process.env.REMOTE_DB_PASSWORD
+);
 
 mongoose
    .connect(DB)
