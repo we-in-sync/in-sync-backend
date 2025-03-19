@@ -5,12 +5,13 @@ const catchAsync = require("./../utils/catchAsync");
 const bcrypt = require("bcryptjs");
 const User = require("./../models/userModel");
 
-const signToken = (payload) => {
-   if (process.env.NODE_ENV == "development") {
-      return jwt.sign({ payload }, process.env.JWT_SECRET, {
-         expiresIn: process.env.JWT_EXPIRESIN_DEV,
-      });
-   }
+const signToken = (userId) => {
+   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+      expiresIn:
+         process.env.NODE_ENV === "development"
+            ? process.env.JWT_EXPIRESIN_DEV
+            : process.env.JWT_EXPIRESIN_PROD,
+   });
 };
 
 const createSendToken = (user, statusCode, res) => {
@@ -28,6 +29,42 @@ const createSendToken = (user, statusCode, res) => {
       },
    });
 };
+
+exports.protect = catchAsync(async (req, res, next) => {
+   let token;
+
+   if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+   ) {
+      token = req.headers.authorization.split(" ")[1];
+   }
+   if (!token) {
+      return next(
+         new AppError(
+            401,
+            "You are no longer logged in. Please log in to access this resource.\n"
+         )
+      );
+   }
+
+   try {
+      var decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+   } catch (err) {
+      return next(
+         new AppError(401, "Invalid or expired token. Please log in again.\n")
+      );
+   }
+
+   const user = await User.findById(decoded.id);
+   if (!user) {
+      return next(new AppError(401, "User no longer exists or is invalid.\n"));
+   }
+
+   req.user = user;
+
+   next();
+});
 
 exports.signup = catchAsync(async (req, res, next) => {
    const newUser = await User.create({
@@ -52,8 +89,8 @@ exports.login = catchAsync(async (req, res, next) => {
       return next(new AppError(401, "Invalid credentials.\n"));
    }
 
-   const matchedPasswords = await user.checkPassword(password, user.password);
-   if (!matchedPasswords) {
+   const isMatchPasswords = await user.checkPassword(password, user.password);
+   if (!isMatchPasswords) {
       return next(new AppError(401, "Invalid credentials.\n"));
    }
 
