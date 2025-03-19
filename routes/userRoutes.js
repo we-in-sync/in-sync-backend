@@ -128,5 +128,17 @@ router.post(
    authValidator.validateLogin,
    authController.login
 );
+router.post(
+   "/forgotPassword",
+   authValidator.forgotPasswordValidationRules,
+   authValidator.validateForgotPassword,
+   authController.forgotPassword
+);
+router.patch(
+   "/resetPassword/:token",
+   authValidator.resetPasswordValidationRules,
+   authValidator.validateResetPassword,
+   authController.resetPassword
+);
 
 module.exports = router;

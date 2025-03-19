@@ -69,6 +69,36 @@ exports.loginValidationRules = [
       .withMessage("Password is required"),
 ];
 
+exports.forgotPasswordValidationRules = [
+   body("email")
+      .exists({ checkFalsy: true })
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Please provide a valid email"),
+];
+
+exports.resetPasswordValidationRules = [
+   body("password")
+      .exists({ checkFalsy: true })
+      .withMessage("Password is required")
+      .isLength({ min: 8, max: 32 })
+      .withMessage("Password must be 8-32 characters")
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+      .withMessage(
+         "Password must include uppercase, lowercase, number, and special character"
+      ),
+
+   body("passwordConfirm")
+      .exists({ checkFalsy: true })
+      .withMessage("Password confirmation is required")
+      .custom((value, { req }) => {
+         if (value !== req.body.password) {
+            throw new Error("Passwords do not match");
+         }
+         return true;
+      }),
+];
+
 exports.validateSignup = (req, res, next) => {
    const errors = validationResult(req);
    if (!errors.isEmpty()) {
@@ -81,6 +111,22 @@ exports.validateSignup = (req, res, next) => {
 };
 
 exports.validateLogin = (req, res, next) => {
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+      return res.status(400).json({ status: "fail", errors: errors.array() });
+   }
+   next();
+};
+
+exports.validateForgotPassword = (req, res, next) => {
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+      return res.status(400).json({ status: "fail", errors: errors.array() });
+   }
+   next();
+};
+
+exports.validateResetPassword = (req, res, next) => {
    const errors = validationResult(req);
    if (!errors.isEmpty()) {
       return res.status(400).json({ status: "fail", errors: errors.array() });

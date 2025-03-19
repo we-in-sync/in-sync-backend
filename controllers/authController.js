@@ -1,8 +1,10 @@
 const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
-const bcrypt = require("bcryptjs");
+const sendEmail = require("./../utils/sendEmail");
 const User = require("./../models/userModel");
 
 const signToken = (userId) => {
@@ -93,6 +95,76 @@ exports.login = catchAsync(async (req, res, next) => {
    if (!isMatchPasswords) {
       return next(new AppError(401, "Invalid credentials.\n"));
    }
+
+   createSendToken(user, 200, res);
+});
+
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+   const user = await User.findOne({ email: req.body.email });
+   if (!user) {
+      return next(
+         new AppError(
+            404,
+            "If that email address is in our system, we sent a token."
+         )
+      );
+   }
+
+   const resetToken = user.createPasswordResetToken();
+   await user.save({ validateBeforeSave: false });
+
+   const message = `
+   <p>Forgot your password? This it the reset code:</p>
+   <p>${resetToken}</p>
+   <p>If you didn’t request a password reset, please ignore this email.</p>`;
+
+   try {
+      await sendEmail({
+         email: user.email,
+         subject: "Your password reset token (valid 10 minutes)",
+         message,
+         html: message,
+      });
+      console.log("sent");
+   } catch (err) {
+      console.error("Error sending email:", err);
+      user.resetToken = undefined;
+      user.resetTokenExpirationDate = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return next(
+         new AppError(
+            500,
+            "There was an error sending the email. Try again later!"
+         )
+      );
+   }
+
+   res.status(200).json({
+      status: "success",
+      message: "Token sent to email!",
+   });
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+   const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+
+   const user = await User.findOne({
+      resetToken: hashedToken,
+      resetTokenExpirationDate: { $gte: Date.now() },
+   });
+   if (!user) {
+      return next(new AppError(400, "Token is invalid or has expired"));
+   }
+
+   user.password = req.body.password;
+   user.passwordConfirm = req.body.passwordConfirm;
+   user.resetToken = undefined;
+   user.resetTokenExpirationDate = undefined;
+   await user.save();
 
    createSendToken(user, 200, res);
 });
